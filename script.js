@@ -2,6 +2,7 @@
 const API_URL = "https://pokeapi.co/api/v2/pokemon";
 const LIMIT = 9;
 let currentPage = 1;
+let totalCount = 0;
 
 const btnSubmit = document.querySelector("[type=submit]");
 const btnReset = document.querySelector(".btn-reset");
@@ -13,86 +14,140 @@ const searchInpuut = document.querySelector("#pokemon-search");
 const renderList = document.querySelector(".pokemon-list");
 const pageInfo = document.querySelector("#pokempn-card-template");
 
+
 // Функция 1: Запрос списка покемонов
 function fetchPokemons(page) {
-    const offset = (page - 1) * LIMIT;
+  const offset = (page - 1) * LIMIT;
+  console.log(`=== PAGINATION: ЗАПРОС СТРАНИЦЫ ${page} ===`);
+  console.log("URL:", `${API_URL}?limit=${LIMIT}&offset=${offset}`);
 
-    return fetch(`${API_URL}?liumit=${LIMIT}$offset=${offser}`).then((response) => {
-        if (!response.ok) {
-            throw new Error(response.status, response.statusText);
-        }
-
-        return response.json
+  return fetch(`${API_URL}?limit=${LIMIT}&offset=${offset}`)
+    .then((response) => {
+      console.log("Статус:", response.status);
+      if (!response.ok) {
+        throw new Error(
+          `Ошибка HTTP: ${response.status} ${response.statusText}`
+        );
+      }
+      return response.json();
     })
     .then((data) => {
-        console.log(data);
-        return data;
+      console.log("=== СПИСОК ПОКЕМОНОВ ===");
+      console.table(data.results);
+      console.log("Общее количество:", data.count);
+      return data;
     })
-    .catch((err) => console.error(err.message));
-}
-
-
-// Функция 2: Запрос деталей покемона
-function fetchPokemonDetails(url, name) {
-    return fetch(url)
-    .then((response) => response.json())
-    .then((details) => {
-        console.log(details);
-        return details;
+    .catch((error) => {
+      console.error("PAGINATION Ошибка:", error.message);
+      throw error;
     });
 }
 
-fetchPokemonDetails(`${API_URL}/4`)
+ fetchPokemons(1);
+
+// Функция 2: Запрос деталей покемона
+function fetchPokemonDetails(url, name) {
+  console.log(`=== ПОКЕМОН ${name}: ЗАПРОС ДЕТАЛЕЙ ===`);
+  console.log("URL:", url);
+
+  return fetch(url)
+    .then((response) => {
+      console.log("Статус:", response.status);
+      if (!response.ok) {
+        throw new Error(
+          `Ошибка HTTP: ${response.status} ${response.statusText}`
+        );
+      }
+      return response.json();
+    })
+    .then((details) => {
+      console.log(`=== ДАННЫЕ ПОКЕМОНА ${name} ===`);
+      console.table({
+        id: details.id,
+        name: details.name,
+        type: details.types[0] ? details.types[0].type.name : "Неизвестно",
+        ability: details.abilities[0]
+          ? details.abilities[0].ability.name
+          : "Неизвестно",
+      });
+      return details;
+    })
+    .catch((error) => {
+      console.error(`ПОКЕМОН ${name} Ошибка:`, error.message);
+      throw error;
+    });
+}
+
+ fetchPokemonDetails(`${API_URL}/4`, "bulbasaur");
 
 // Функция 3: Создание карточки из шаблона
 function createPokemonCard(details) {
-    const cloneElement = template.content.cloneNode(true);
+  const template = document.getElementById("pokemon-card-template");
+  const clone = template.content.cloneNode(true);
 
-    const name = cloneElement.querySelector("pokemon-name");
-    const img = cloneElement.querySelector("pokemon-image");
-    const type = cloneElement.querySelector("pokemon-type");
+  const nameEl = clone.querySelector(".pokemon-name");
+  const imageEl = clone.querySelector(".pokemon-image");
+  const typeEl = clone.querySelector(".pokemon-type");
+  const abilitiesDiv = clone.querySelector('.pokemon-abilities');
+  // первая способность
+  if (details.abilities.length > 0) {
+    abilitiesDiv.innerHTML = `<div>Способность 1: ${details.abilities[0].ability.name}</div>`;
+  }
+  // ну и вторая типо
+  if (details.abilities.length > 1) {
+    abilitiesDiv.innerHTML += `<div>Способность 2: ${details.abilities[1].ability.name}</div>`;
+  }
 
-    name.textContent = details.name;
-    img.src = details.sprites.front_default || "https://via.placeholder.com/100";
-    img.alt = details.name;
-    type.textContent = `Тип: ${details.types[0] ? details.types[0].type.name : "Unknow"}`;
+  nameEl.textContent = details.name;
+  imageEl.src =
+    details.sprites.front_default || "https://via.placeholder.com/100";
+  imageEl.alt = details.name;
+  typeEl.textContent = `Тип: ${details.types[0] ? details.types[0].type.name : "Неизвестно"
+    }`;
 
-    return cloneElement;
+  return clone;
 }
 
 // Функция 4: Рендеринг карточек
 function renderPokemonCards(pokemons) {
-    clearPokemonList()
+  const list = document.querySelector(".pokemon-list");
+  clearPokemonList();
 
-    let index = 0;
-    function processNextPocemon() {
-        if (index >= pokemons.length) return
+  // Обрабатываем покемонов последовательно
+  let index = 0;
+  function processNextPokemon() {
+    if (index >= pokemons.length) return;
 
-        const pokemon = pokemons[index]
-        fetchPokemonDetails(pokemon.url)
-        .then(details => {
-            const card = createPokemonCard(details)
-            renderList.appendChild(card)
-            index++
-            processNextPocemon()
-        })
-        .catch ((err) => showError(err.message));
-    }
-
-    processNextPocemon()
+    const pokemon = pokemons[index];
+    fetchPokemonDetails(pokemon.url, pokemon.name)
+      .then((details) => {
+        const card = createPokemonCard(details);
+        list.appendChild(card);
+        index++;
+        processNextPokemon();
+      })
+      .catch((error) => {
+        showError(error.message);
+      });
+  }
+  processNextPokemon();
 }
 
 // Функция 5: Обновление пагинации
 function updatePagination(page, hasPrevious, hasNext) {
-    pageInfo.textContent = `Страница ${page}`;
-    btnPrev.disabled = !hasPrevious;
-    btnNext.disabled = !hasNext;
+  document.querySelector(".page-info").textContent = `Страница ${page}`;
+  document.querySelector(".btn-prev").disabled = !hasPrevious;
+  document.querySelector(".btn-next").disabled = !hasNext;
+  console.log("=== PAGINATION UPDATE ===");
+  console.log("Текущая страница:", page);
+  console.log("Есть предыдущая:", hasPrevious);
+  console.log("Есть следующая:", hasNext);
 }
 
 // Функция 6: Обработка поиска
 function handleSearch(query) {
-   console.log("=== SEARCH: ЗАПРОС ===");
-   console.log("Поиск:", query);
+  console.log("=== SEARCH: ЗАПРОС ===");
+  console.log("Поиск:", query);
 
   fetch(`${API_URL}?limit=100`)
     .then((response) => {
@@ -128,29 +183,36 @@ function handleSearch(query) {
 }
 
 // Функция 7: Очистка списка
-function clearPokemonList() {}
-renderList.innerHTML = "";
+function clearPokemonList() {
+  const list = document.querySelector(".pokemon-list");
+  list.innerHTML = "";
+  console.log("=== LIST CLEARED ===");
+}
 
 // Функция 8: Показ ошибок
 function showError(message) {
-    renderList.innerHTML = `<p style="color: red;">Ошибка: $(message)</p>`;
+  const list = document.querySelector(".pokemon-list");
+  list.innerHTML = `<p style="color: red;">Ошибка: ${message}</p>`;
+  console.log("=== ERROR DISPLAYED ===");
+  console.log("Сообщение:", message);
 }
 
 // Функция 9: Загрузка страницы
 function loadPage(page) {
-    fetchPokemons(page)
+  fetchPokemons(page)
     .then((data) => {
-        renderPokemonCards(data.results);
-        updatePagination(page, !!data.previos, !!data.next);
+      renderPokemonCards(data.results);
+      updatePagination(page, !!data.previous, !!data.next);
     })
-    .catch((errpr) => {
-        showError(error.message)
+    .catch((error) => {
+      showError(error.message);
     });
 }
 
+loadPage(currentPage);
 // Функция 10: Настройка событий
 function setupEventListeners() {
-    document.querySelector(".btn-prev").addEventListener("click", () => {
+  document.querySelector(".btn-prev").addEventListener("click", () => {
     if (currentPage > 1) {
       currentPage--;
       console.log("=== NAVIGATION: PREV ===");
