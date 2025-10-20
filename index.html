@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PokeAPI</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <h1>PokeAPI</h1>
+      <p>Поиск покемонов</p>
+    </header>
+    <section>
+      <form class="search-form">
+        <input
+          type="text"
+          id="pokemon-search"
+          placeholder="Найти покемона (например, saur)"
+        />
+        <button type="submit">Поиск</button>
+        <button type="button" class="btn-reset">Сброс</button>
+      </form>
+      <div class="pokemon-list"></div>
+      <div class="pagination">
+        <button class="btn btn-prev" disabled>Назад</button>
+        <span class="page-info">Страница 1</span>
+        <button class="btn btn-next">Вперёд</button>
+      </div>
+    </section>
+    <template id="pokemon-card-template">
+      <div class="pokemon-card">
+        <h3 class="pokemon-name"></h3>
+        <img class="pokemon-image" src="" alt="" />
+        <p class="pokemon-type"></p>
+      </div>
+    </template>
+  </body>
+</html>
